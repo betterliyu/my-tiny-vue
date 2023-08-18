@@ -1,0 +1,129 @@
+<div id="app"></div>
+
+<style>
+  .red {
+    color: red
+  }
+
+  .green {
+    color: green
+  }
+</style>
+
+<script>
+  function h(tag, props, children) {
+    return { tag, props, children }
+  }
+
+  function mount(vnode, container) {
+    if (typeof vnode == 'string') {
+      const dom = document.createTextNode(vnode)
+      return container.appendChild(dom)
+    }
+
+    const dom = document.createElement(vnode.tag)
+    vnode.el = dom
+
+    if (vnode.props) {
+      Object.keys(vnode.props).forEach(prop => {
+        if (prop.startsWith('on')) {
+          dom.addEventListener(prop.slice(2).toLowerCase(), vnode.props[prop])
+        } else {
+          dom.setAttribute(prop, vnode.props[prop])
+        }
+      })
+    }
+
+    if (vnode.children) {
+      if (Array.isArray(vnode.children)) {
+        vnode.children.forEach(child => {
+          mount(child, dom)
+        })
+      } else {
+        mount(vnode.children, dom)
+      }
+    }
+
+    container.appendChild(dom)
+  }
+
+  function patch(n1, n2) {
+    const el = n2.el = n1.el
+
+    
+    if (n1.tag != n2.tag) {
+      n1.parentNode.removeChild(n1)
+      mount(n2, n1.parentNode)
+      return 
+    }
+
+    // deal with props
+    const oldProps = n1.props || {}
+    const newProps = n2.props || {}
+    for (const key in newProps) {
+      el.setAttribute(key, newProps[key])
+    }
+      
+    for (const key in oldProps) {
+      if (!(key in newProps)) {
+        el.removeAttribute(key)
+      }
+    }
+
+    // deal with children
+    const oldChildren = n1.children
+    const newChildren = n2.children
+    if (typeof oldChildren == 'string') {
+      if (typeof newChildren == 'string') {
+        if (oldChildren != newChildren) {
+          el.textContent = newChildren
+        }
+      } else {
+        // newChildren is array
+        el.innerHTML = ''
+        newChildren.forEach(child => {
+          mount(child, el)
+        })
+      }
+    } else {
+      // oldChildren is array
+      if (typeof newChildren == 'string') {
+        el.innerHTML = ''
+        el.textContent = newChildren
+      } else {
+        const oldChildrenLen = oldChildren ? oldChildren.length : 0
+        const newChildrenLen = newChildren ? newChildren.length : 0
+        const commonLength = Math.min(oldChildrenLen, newChildrenLen)
+        for (let i = 0; i < commonLength; i++) {
+          patch(oldChildren[i], newChildren[i])
+        }
+        if (oldChildrenLen < newChildrenLen) {
+          newChildren.slice(commonLength).forEach(child => {
+            mount(child, el)
+          })
+        } else if (newChildrenLen < oldChildrenLen) {
+          oldChildren.slice(commonLength).forEach(child => {
+            el.removeChild(child.el)
+          })
+        }
+      }
+    }
+  }
+
+
+  const update = () => {
+    const vdom1 = h('div', { id: 'foo' }, [
+      h('span', { class: 'green', onClick: update }, 'changed'),
+    ])
+    patch(edom, vdom1)
+  }
+
+
+  const edom = h('div', { id: 'foo' }, [
+    h('span', { class: 'red', onClick: update }, 'baz'),
+  ])
+
+  mount(edom, document.getElementById('app'))
+
+
+</script>
