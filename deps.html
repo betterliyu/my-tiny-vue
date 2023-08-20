@@ -1,0 +1,50 @@
+<script>
+
+  let activeEffect = null
+  
+  class Dep {
+    constructor(value) {
+      this.subscribers = new Set()
+      this._value = value
+    }
+
+    get value() {
+      this.depend()
+      return this._value  
+    }
+
+    set value(val) {
+      this._value = val
+      this.notify()
+    }
+    
+    depend() {
+      if (activeEffect) {
+        this.subscribers.add(activeEffect)
+      }
+    }
+
+    notify() {
+      this.subscribers.forEach((sub) => {
+        sub()
+      })
+    }
+
+  }
+
+  let dep = new Dep('hello')
+
+  const watchEffect = (effect) => {
+    activeEffect = effect
+    effect()
+    activeEffect = null
+  }
+
+  watchEffect(() => {
+    // getter 方法内部调用了depend方法，所以下次设置 dep.value 这个方法总是会执行
+    console.log(dep.value);
+  })
+
+  dep.value = 'changed'
+
+</script>
